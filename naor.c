@@ -9,6 +9,8 @@
 #include <time.h>
 #include <sys/sendfile.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
 #define MAX_CLIENTS 1
 #define BUFFER_SIZE 1024
@@ -495,9 +497,51 @@ void client_udsstream(char *argv[])
     printf("TODO!!!\n");   // TODO!!!!
 }
 
-void server_mmap(char *argv[])
+void server_mmap(char * filename, int quiet)
 {
-    printf("\n");
+    int fd = open(filename, O_RDWR | O_CREAT, 0666);
+    if (fd == -1)
+    {
+        perror("open error");
+        exit(1);
+    }
+
+    if(ftruncate(fd, SIZE) < 0)
+    {
+        perror("error resize");
+        exit(1);
+    }
+
+    void * mmmap = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd , 0);
+    if (mmmap == MAP_FAILED)
+    {
+        perror("mmap err");
+        exit(1);
+    }
+    int new_fd = open("mmp.bin", O_WRONLY | O_CREAT, 0666);
+    clock_t time = clock();
+    if (new_fd == -1)
+    {
+        perror("err");
+        exit(1);
+    }
+    if(write(new_fd, mmmap, SIZE) == -1)
+    {
+        perror("err");
+        exit(1);
+    }
+    clock_t etime = clock() - time;
+    double total_time = (double)(etime - time) / CLOCKS_PER_SEC;
+    printf("mmap time %f\n", total_time * 1000);
+    if(quiet) calculate_file_checksum("mmp.bin");
+    if(munmap(mmmap, SIZE) == -1)
+    {
+        perror("munmap err");
+        exit(1);
+    }
+    close(fd);
+    close(new_fd);
+
 }
 
 void client_mmap(char *argv[])
@@ -535,9 +579,34 @@ void client_pipe(char *filename)
     fclose(f);
 }
 
-void server_pipe(char *argv[])
+void server_pipe(int quiet)
 {
-    printf("\n");
+    int fd;
+    FILE * f;
+    char buff[BUFFER_SIZE];
+    int bytes;
+
+    mkfifo(PIPE, 0666);
+
+    int pipe_fd = open(PIPE, O_RDONLY);
+    if (pipe_fd == -1)
+    {
+        perror("error open");
+        exit(1);
+    }
+
+    clock_t time = clock();
+    while((bytes = read(pipe_fd, buff, BUFFER_SIZE)) > 0)
+    {
+        fwrite(buff, sizeof(char), bytes, f);
+    }
+
+    time = clock() - time;
+    double total_time = (double)(time) / CLOCKS_PER_SEC;
+    printf("pipe time %f\n", total_time * 1000);
+    if(quiet) calculate_file_checksum("mmp.bin");
+    close(pipe_fd);
+    fclose(f);
 }
 
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
