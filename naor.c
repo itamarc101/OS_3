@@ -477,27 +477,27 @@ void server_ipv6_udp(int port, int quiet)
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 
-void server_udsdgram(char *argv[])
+void server_udsdgram()
 {
     printf("TODO!!!\n"); // TODO !!!!!
 }
 
-void client_udsdgram(char *argv[])
+void client_udsdgram()
 {
     printf("TODO!!!\n"); // TODO !!!!!
 }
 
-void server_udsstream(char *argv[])
+void server_udsstream()
 {
     printf("TODO!!!\n");   // TODO!!!!
 }
 
-void client_udsstream(char *argv[])
+void client_udsstream()
 {
     printf("TODO!!!\n");   // TODO!!!!
 }
 
-void server_mmap(char * filename, int quiet)
+void server_mmap(char *filename, int quiet)
 {
     int fd = open(filename, O_RDWR | O_CREAT, 0666);
     if (fd == -1)
@@ -677,14 +677,14 @@ void server(int port, int perf, int quiet)
     }
     else if(strcmp(type, "uds") == 0)
     {
-        if(strcmp(param, "stream") == 0) server_udsstream(argv);
-        else if(strcmp(param, "dgram") == 0) server_udsdgram(argv);
+        if(strcmp(param, "stream") == 0) server_udsstream();
+        else if(strcmp(param, "dgram") == 0) server_udsdgram();
         printf("need to fulfill");
     }
     else if(strchr(param, '.') != NULL)
     {
-        if(strcmp(type, "mmap") == 0) server_mmap(argv);
-        else if(strcmp(type, "pipe") == 0) server_pipe(argv);
+        if(strcmp(type, "mmap") == 0) server_mmap(filename, quiet);
+        else if(strcmp(type, "pipe") == 0) server_pipe();
     }
 
 
@@ -818,11 +818,11 @@ int main(int argc, char *argv[])
             }
             else if(strcmp(argv[5],"uds")==0)
             {
-                if(strcmp(argv[6],"stream") == 0) client_udsstream(argv);
-                else client_udsdgram(argv);
+                if(strcmp(argv[6],"stream") == 0) client_udsstream();
+                else client_udsdgram();
             }
-            else if(strcmp(argv[5],"mmap") == 0) client_mmap(argv);
-            else if(strcmp(argv[5],"pipe") == 0) client_pipe(argv);
+            else if(strcmp(argv[5],"mmap") == 0) client_mmap();
+            else if(strcmp(argv[5],"pipe") == 0) client_pipe();
 
         }
         client(ip, port);
