@@ -473,37 +473,47 @@ void server_ipv6_udp(int port, int quiet)
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-/*
-void server_udsdgram()
+
+void server_udsdgram(int quiet)
 {
     printf("TODO!!!\n"); // TODO !!!!!
 }
 
-void client_udsdgram()
+void client_udsdgram(int quiet)
 {
     printf("TODO!!!\n"); // TODO !!!!!
 }
 
-void server_udsstream()
+void server_udsstream(int quiet)
 {
     printf("TODO!!!\n");   // TODO!!!!
 }
 
-void client_udsstream()
+void client_udsstream(int quiet)
 {
     printf("TODO!!!\n");   // TODO!!!!
 }
 
-void server_mmap()
+void server_mmap(int quiet)
 {
 
 }
 
-void client_mmap()
+void client_mmap(int quiet)
 {
 
 }
-*/
+
+void client_pipe(int quiet)
+{
+
+}
+
+void server_pipe(int quiet)
+{
+
+}
+
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 //&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -572,8 +582,8 @@ void server(int port, int perf, int quiet)
     }
     else if(strcmp(type, "uds") == 0)
     {
-        //else if(strcmp(param, "stream") == 0) server_udsstream(quiet);
-        //else if(strcmp(param, "dgram") == 0) server_udsdgram(quiet);
+        if(strcmp(param, "stream") == 0) server_udsstream(quiet);
+        else if(strcmp(param, "dgram") == 0) server_udsdgram(quiet);
         printf("need to fulfill");
     }
     else if(strchr(param, '.') != NULL)
@@ -661,7 +671,7 @@ void server(int port, int perf, int quiet)
 int main(int argc, char *argv[])
 {
     int perf = 0, quiet = 0;
-    if (argc < 3)
+    if (argc < 3 || argc > 7)
     {
         printf("Usage: %s [-c IP PORT (opt: -p type param |-s PORT (opt: -p -q)]\n", argv[0]);
         exit(1);
@@ -669,6 +679,13 @@ int main(int argc, char *argv[])
     int is_client = 0;
     const char *ip;
     int port;
+
+    for (int i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], "-p") == 0) perf = 1;
+        else if (strcmp(argv[i], "-q") == 0) quiet = 1;
+    }
+    
 
     if (strcmp(argv[1], "-c") == 0)
     {
@@ -703,6 +720,14 @@ int main(int argc, char *argv[])
                 if(strcmp(argv[5], "tcp") == 0) client_ipv6_tcp(port, ip); 
                 else if(strcmp(argv[5], "udp") == 0) client_ipv4_udp(port, ip);
             }
+            else if(strcmp(argv[5],"uds")==0)
+            {
+                // if(strcmp(argv[6],"stream") == 0) client_udsstream(argv);
+                //else client_udsdgram(argv);
+            }
+            //else if(strcmp(argv[5],"mmap") == 0) client_mmap(argv);
+            //else if(strcmp(argv[5],"pipe") == 0) client_pipe(argv);
+
         }
         client(ip, port);
     }
