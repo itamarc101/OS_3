@@ -152,7 +152,7 @@ void server_udsdgram(int quiet_mode)
     }
     else
     {
-        printf("uds_stream,%.6lf seconds\n", (double)time);
+        printf("uds_stream,%.6lf seconds\n", (double)time*1000);
     }
 }
 
@@ -358,8 +358,7 @@ void client_ipv4_tcp(int port, const char* ip)
     int f = open("newfile.bin", O_RDONLY);
     off_t offset = 0;
     int sent;
-    printf("entering while sending file to server\n");
-    sleep(10);
+    sleep(5);
     while( (sent = sendfile(sock_addr, f, &offset,BUFFER_SIZE ))  > 0 ) {
         
         if(sent == -1){
@@ -375,8 +374,6 @@ void client_ipv4_tcp(int port, const char* ip)
 
 void server_ipv4_tcp(int port, int quiet)
 {
-    printf("ENTERED SERVER IPV4!!!\n");
-    
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock < 0)
     {
@@ -395,13 +392,12 @@ void server_ipv4_tcp(int port, int quiet)
         perror("error bind");
         exit(1);
     }
-    printf("bind\n");
+
     if(listen(server_sock, 5) < 0)
     {
         perror("error listen");
         exit(1);
     }
-    printf("listen\n");
 
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -411,14 +407,12 @@ void server_ipv4_tcp(int port, int quiet)
         perror("error accept");
         exit(1);
     }   
-    printf("eccept client\n");
 
     char buf[BUFFER_SIZE];
     int sfile = SIZE;
     FILE * f = fopen("newfile_tcp4", "wb");
     int rec;
     sleep(1);
-    printf("entering while\n");
     clock_t time = clock();
 
     while(sfile > 0 ){
@@ -430,11 +424,10 @@ void server_ipv4_tcp(int port, int quiet)
         sfile -= rec;
     } 
     time = clock() - time;   
-    printf("out of while\n");
-    printf("time send file: %f\n", (double)time);
+
+    printf("time ipv4 tcp: %f\n", (double)time);
     char * filename = "newfile_tcp4";
     if (quiet) calculate_file_checksum(filename);
-    //calculate_file_checksum("newfile_tcp4");
     fclose(f);
     close(connect_sock);
     
@@ -550,17 +543,22 @@ void client_ipv4_udp(int port, const char* ip)
     server_addr.sin_addr.s_addr =inet_addr(ip);
     server_addr.sin_port = htons(port);
 
+    generate_file();
     char buf[BUFFER_SIZE];
     FILE * f = fopen("newfile.bin", "rb");
     int sent, len;
-    while( (len = fread(buf, 1, BUFFER_SIZE, f ))  > 0 ) {
-        sent = sendto(sock_addr, buf, len, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    
+    sleep(5);
+    while( (len = fread(buf, BUFFER_SIZE, 1, f ))  > 0 ) {
+        sent = sendto(sock_addr, buf, BUFFER_SIZE, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
         if (sent < 0)
         {
             perror("error sentdo");
             exit(1);
         }
     }
+    printf("sent file\n");
+    sleep(3);
     fclose(f);
     close(sock_addr);
 }
@@ -573,13 +571,28 @@ void server_ipv4_udp(int port, int quiet)
         exit(1);
     }
 
-    printf("waiting for connection\n");
-
+    struct sockaddr_in server_addr;
     char buf[BUFFER_SIZE];
-    FILE * f = fopen("mewfile_udp4", "wb");
+    FILE * f = fopen("newfile_udp4", "wb");
     int rec, len;
     socklen_t client_addr_len;
     struct sockaddr_in client_addr;
+    socklen_t clnt_len = sizeof(client_addr);
+    memset(&server_addr, 0 ,sizeof(server_addr));
+    memset(&client_addr, 0 ,sizeof(client_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(port);
+
+
+    if (bind(sock_addr, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("err bind!");
+        exit(1);
+    }
+    sleep(2);
+    clock_t time = clock();
+
     while(1)
     {
         len = recvfrom(sock_addr, buf, BUFFER_SIZE, 0, (struct sockaddr*)&client_addr, &client_addr_len);
@@ -589,10 +602,14 @@ void server_ipv4_udp(int port, int quiet)
             exit(1);
         }
         fwrite(buf, 1 , len , f);
-        if ( len < BUFFER_SIZE) break;
+        memset(buf, 0, BUFFER_SIZE);
+        len -= len;
+        if ( len <= BUFFER_SIZE) break;
     }
+    time = clock() - time;
+    printf("ipv4 udp time: %f\n", (double)time);
 
-    calculate_file_checksum("newfile_udp4");
+    if(quiet) calculate_file_checksum("newfile_udp4");
     fclose(f);
     close(sock_addr);
 }
@@ -927,22 +944,31 @@ void client_perf(char* argv[])
         if(strcmp(argv[6], "tcp") == 0) 
         {
             send(sockfd, "ipv4 tcp", strlen("ipv4 tcp"), 0);
-            sleep(2);
-            client_ipv4_tcp(port+1,argv[2]);
+            client_ipv4_tcp(port+1, argv[2]);
         }
-        else client_ipv4_udp(port+1, argv[2]);
+        else if (strcmp(argv[6], "udp") == 0) {
+            send(sockfd, "ipv4 udp", strlen("ipv4 udp"), 0);
+            client_ipv4_udp(port+1, argv[2]);
+        }
     }
     else if(strcmp(argv[5], "ipv6")==0)
     {
-        if(strcmp(argv[6], "tcp") == 0) client_ipv6_tcp(port+1,argv[2]);
-        else client_ipv6_udp(port+1, argv[2]);
+        if(strcmp(argv[6], "tcp") == 0) 
+        {
+            send(sockfd, "ipv6 tcp", strlen("ipv6 tcp"), 0);
+            client_ipv6_tcp(port+1, argv[2]);
+        }
+        else if (strcmp(argv[6], "udp") == 0)
+        {
+            send(sockfd, "ipv6 udp", strlen("ipv6 udp"), 0);
+            client_ipv6_udp(port+1, argv[2]);
+        }
     }
 
     else if(strcmp(argv[5], "mmap") == 0) client_mmap(argv[6]);
     else if(strcmp(argv[5], "pipe") == 0) client_pipe(argv[6]);
 
 }
-
 
 
 void server(int port)
@@ -1100,7 +1126,6 @@ void server_perf(char* argv[], int quiet)
         exit(1);
     }
     
-    printf("eccept client - %d\n", client_addr.sin_addr.s_addr);
     char buff[BUFFER_SIZE];
     int bytes = recv(client_sock, &buff, sizeof(buff), 0);
     if(bytes == -1){
@@ -1109,15 +1134,14 @@ void server_perf(char* argv[], int quiet)
     }
 
     buff[bytes] = '\0';
-    printf("this is buff: %s\n", buff);
+    printf("buff: %s\n", buff);
 
     if(strcmp(buff,"ipv4 tcp") == 0)
     {
-        printf("entering server ip4 tcp\n");
         server_ipv4_tcp(port + 1, quiet);
         return;
     }
-
+   
     else if(strcmp(buff,"ipv4 udp") == 0)
     {
         server_ipv4_udp(port + 1, quiet);
