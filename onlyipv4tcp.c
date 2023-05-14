@@ -120,7 +120,7 @@ void server_udsdgram(int quiet_mode)
 
                 if (f == NULL)
                 {
-                    f = fopen("newfile.bin", "wb");
+                    f = fopen("newfile_udsDgram.bin", "wb");
                     if (f == NULL)
                     {
                         perror("error open file");
@@ -249,7 +249,7 @@ void server_udsstream(int quiet_mode)
 
         if (f == NULL)
         {
-            f = fopen("newfile.bin", "wb");
+            f = fopen("newfile_udsStream.bin", "wb");
             if (f == NULL)
             {
                 perror("fopen");
@@ -355,7 +355,7 @@ void client_ipv4_tcp(int port, const char* ip)
 
     generate_file();
     char buf[BUFFER_SIZE];
-    int f = open("newfile4.bin", O_RDONLY);
+    int f = open("newfile.bin", O_RDONLY);
     off_t offset = 0;
     int sent;
     printf("entering while sending file to server\n");
@@ -368,7 +368,7 @@ void client_ipv4_tcp(int port, const char* ip)
         }
     }
     printf("file transfer\n");
-    sleep(5);
+    sleep(2);
     close(f);
     close(sock_addr);
 }
@@ -395,12 +395,13 @@ void server_ipv4_tcp(int port, int quiet)
         perror("error bind");
         exit(1);
     }
-
+    printf("bind\n");
     if(listen(server_sock, 5) < 0)
     {
         perror("error listen");
         exit(1);
     }
+    printf("listen\n");
 
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -410,7 +411,8 @@ void server_ipv4_tcp(int port, int quiet)
         perror("error accept");
         exit(1);
     }   
-    
+    printf("eccept client\n");
+
     char buf[BUFFER_SIZE];
     int sfile = SIZE;
     FILE * f = fopen("newfile_tcp4", "wb");
@@ -429,7 +431,7 @@ void server_ipv4_tcp(int port, int quiet)
     } 
     time = clock() - time;   
     printf("out of while\n");
-    printf("time send file: %f\n", (double)(time/ CLOCKS_PER_SEC ) * 1000);
+    printf("time send file: %f\n", (double)time);
     char * filename = "newfile_tcp4";
     if (quiet) calculate_file_checksum(filename);
     //calculate_file_checksum("newfile_tcp4");
@@ -925,14 +927,15 @@ void client_perf(char* argv[])
         if(strcmp(argv[6], "tcp") == 0) 
         {
             send(sockfd, "ipv4 tcp", strlen("ipv4 tcp"), 0);
-            client_ipv4_tcp(port,argv[2]);
+            sleep(2);
+            client_ipv4_tcp(port+1,argv[2]);
         }
-        else client_ipv4_udp(port, argv[2]);
+        else client_ipv4_udp(port+1, argv[2]);
     }
     else if(strcmp(argv[5], "ipv6")==0)
     {
-        if(strcmp(argv[6], "tcp") == 0) client_ipv6_tcp(port,argv[2]);
-        else client_ipv6_udp(port, argv[2]);
+        if(strcmp(argv[6], "tcp") == 0) client_ipv6_tcp(port+1,argv[2]);
+        else client_ipv6_udp(port+1, argv[2]);
     }
 
     else if(strcmp(argv[5], "mmap") == 0) client_mmap(argv[6]);
