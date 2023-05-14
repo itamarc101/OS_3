@@ -191,7 +191,7 @@ void client_udsdgram()
     fclose(f);
     close(sock);
 
-    printf("File transfer completed in %ld milliseconds.\n", time);
+    printf("File transfer completed in %f .\n", (double)time);
 }
 
 void server_udsstream(int quiet_mode)
@@ -887,7 +887,7 @@ void client(const char *ip, int port)
 
 void client_perf(char* argv[])
 {
-    int port = atoi(argv[2]);
+    int port = atoi(argv[3]);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd == -1)
     {
@@ -903,6 +903,7 @@ void client_perf(char* argv[])
 
     if(connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))< 0)
     {
+        printf("%s", argv[3]);
         perror("err connect");
         exit(1);
     }
@@ -1036,7 +1037,7 @@ void server(int port)
 
 void server_perf(char* argv[], int quiet)
 {
-    int port = atoi(argv[3]);
+    int port = atoi(argv[2]);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
