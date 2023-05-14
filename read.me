@@ -1,0 +1,32 @@
+Operating System Assignment 3
+By Itamar Cohen and Naor Ladani
+
+We have been asked to buikd a chat cmd tool that can send messages over network to the same tool.
+There are 2 sides. Communication based on IPv4 TCP. We use poll here.
+
+client: ./stnc -c IP PORT
+server: ./stnc -s PORT
+
+
+Performance test
+We expand the tool so it will work test utility.
+Sending 100MB size of data from client to server.
+The server reports the time.
+
+TCP/UDP ipv4 and ipv6
+mmap and pipe
+UDS stream, dgram 
+
+client: ./stnc -c IP PORT -p TYPE PARAM
+-p stands for performance 
+TYPE is the communication type
+PARAM is the parameter
+ipv4 ipv6 uds pipe mmap
+
+server: ./stnc -s PORT -p -q
+-p performance
+-q quiet mode
+
+
+
+
