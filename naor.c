@@ -302,7 +302,7 @@ void client_udsstream(const char *ip, int port)
 
     generate_file();
     char c;
-    c = cecksum__("newfile.bin");
+    c = calculate_file_checksum("newfile.bin");
     if (send(sock, &c, sizeof(c), 0) == -1)
     {
         perror("send");
@@ -317,7 +317,7 @@ void client_udsstream(const char *ip, int port)
         exit(1);
     }
 
-    while (fgets(buf, BUFSIZ, f) != EOF)
+    while (fgets(buf, BUFFER_SIZE, f) != NULL)
     {
         if (send(sock, buf, BUFFER_SIZE, 0) == -1)
         {
