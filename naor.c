@@ -363,6 +363,7 @@ void client_ipv4_tcp(int port, const char* ip)
             exit(1);
         }
     }
+    printf("file transfer");
     close(f);
     close(sock_addr);
 }
@@ -888,18 +889,19 @@ void client(const char *ip, int port)
 void client_perf(char* argv[])
 {
     int port = atoi(argv[3]);
+
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    // serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serv_addr.sin_port = htons(port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd == -1)
     {
         perror("err sock");
         exit(1);
     }
-
-    struct sockaddr_in serv_addr;
-    memset(&serv_addr, 0, sizeof(serv_addr));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     if(connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))< 0)
     {
@@ -1037,6 +1039,8 @@ void server(int port)
 
 void server_perf(char* argv[], int quiet)
 {
+    printf("in server perf\n");
+
     int port = atoi(argv[2]);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -1055,20 +1059,21 @@ void server_perf(char* argv[], int quiet)
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(atoi(argv[3]));
+    serv_addr.sin_port = htons(port);
 
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         perror("ERROR on binding");
         exit(1);
     }
-
+    printf("bind\n");
     if (listen(sockfd, 5) < 0)
     {
         perror("ERROR on listening");
         exit(1);
     }
-    
+    printf("listen\n");
+
     struct sockaddr_in client_addr;
     socklen_t client_addr_size = sizeof(client_addr);
     int client_sock = accept(sockfd, (struct sockaddr*) & client_addr, &client_addr_size);
@@ -1077,6 +1082,7 @@ void server_perf(char* argv[], int quiet)
         perror("err sock accept");
         exit(1);
     }
+    printf("eccept client - %d", client_addr.sin_addr.s_addr);
     char buff[BUFFER_SIZE];
     int bytes = recv(client_sock, &buff, sizeof(buff), 0);
     if(bytes == -1){
@@ -1150,7 +1156,10 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < argc; i++)
     {
-        if (strcmp(argv[i], "-p") == 0) perf = 1;
+        if (strcmp(argv[i], "-p") == 0) {
+            perf = 1;
+            printf("pref\n");
+        }
         else if (strcmp(argv[i], "-q") == 0) quiet = 1;
     }
 
@@ -1186,13 +1195,13 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if (is_client)
+    if (is_client == 1)
     {
         client(ip, port);
     }
     else
     {
-        if( !perf) server(port);
+        if(perf == 0) server(port);
         else server_perf(argv, quiet);
     }
 
