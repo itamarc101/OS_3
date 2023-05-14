@@ -1204,7 +1204,7 @@ void server_perf(char* argv[], int quiet)
     }
 
     buff[bytes] = '\0';
-    printf("buff: %s\n", buff);
+    //printf("buff: %s\n", buff);
 
     if(strcmp(buff,"ipv4 tcp") == 0)
     {
