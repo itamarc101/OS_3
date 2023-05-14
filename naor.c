@@ -191,7 +191,7 @@ void client_udsdgram()
     fclose(f);
     close(sock);
 
-    printf("File transfer completed in %f milliseconds.\n", time);
+    printf("File transfer completed in %ld milliseconds.\n", time);
 }
 
 void server_udsstream(int quiet_mode)
