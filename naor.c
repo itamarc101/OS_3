@@ -11,12 +11,13 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-
+#include <sys/un.h>
+#include <sys/fcntl.h>
 #define MAX_CLIENTS 1
 #define BUFFER_SIZE 1024
 #define SIZE 104857600
 #define PIPE "/tmp/pipe"
-
+#define SOCKET_PATH "/tmp/mysocket"
 void generate_file() {
     const char* filename = "random.bin";
     FILE* file = fopen(filename, "wb");
@@ -60,7 +61,235 @@ unsigned char calculate_file_checksum(const char *filename)
     fclose(file);
     return checksum;
 }
+void serverUdsDgram() {
+    int serverfd;
+    struct sockaddr_un addr, client_addr;
+    int addr_len = sizeof(client_addr);
+    char buf[BUFFER_SIZE];
 
+    // Create a socket
+    if ((serverfd = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
+        perror("error socket");
+        exit(1);
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    unlink(SOCKET_PATH);
+
+    if (bind(serverfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("error bind");
+        exit(1);
+    }
+
+    struct pollfd fds[1];
+    fds[0].fd = serverfd;
+    fds[0].events = POLLIN;
+
+    FILE *f = NULL;
+    int rec = 0;
+    int pollRet;
+    clock_t time = clock();
+
+    while (1) {
+        pollRet = poll(fds, 1, -1);
+
+        if (pollRet > 0) {
+            if (fds[0].revents & POLLIN) {
+                int rec = recvfrom(serverfd, buf, BUFFER_SIZE, 0,
+                                              (struct sockaddr *)&client_addr, (socklen_t *)&addr_len);
+                if (rec <= 0) {
+                    perror("recvfrom");
+                    break;
+                }
+
+                if (f == NULL) {
+                    f = fopen("newfile.bin", "wb");
+                    if (f == NULL) {
+                        perror("error open file");
+                        exit(1);
+                    }
+                }
+
+                fwrite(buf, 1, rec, f);
+            }
+        } else {
+            perror("poll");
+            break;
+        }
+    }
+
+
+     time = clock() - time;
+    if (f != NULL) {
+        fclose(f);
+    }
+    close(serverfd);
+
+        printf("uds_dgram,%f\n", (double)time);
+    }
+
+
+void client_uds_dgram() {
+    int sock = 0;
+    struct sockaddr_un server_addr;
+    char buf[BUFFER_SIZE];
+
+    // Create a socket
+    if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+    
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, SOCKET_PATH, sizeof(server_addr.sun_path) - 1);
+
+    FILE *f = fopen("newfile.bin", "rb");
+    if (f == NULL) {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+
+    clock_t time = clock();
+    int read;
+    while ((read = fread(buf, 1, BUFFER_SIZE, f)) > 0) {
+        sendto(sock, buf, read, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    }
+
+    time = clock() - time ; 
+
+    fclose(f);
+    close(sock);
+
+
+    printf("File transfer completed in %f milliseconds.\n", time);
+}
+
+
+void server_Uds_Stream(i)
+{
+    int serverfd, client_sock;
+    struct sockaddr_un addr, client_addr;
+    int addr_len = sizeof(client_addr);
+    char buf[BUFFER_SIZE];
+
+    if ((serverfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    {
+        perror("socket");
+        exit(1);
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    unlink(SOCKET_PATH);
+
+    if (bind(serverfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("bind");
+        exit(1);
+    }
+
+    if (listen(serverfd, 1) < 0)
+    {
+        perror("listen");
+        exit(1);
+    }
+
+    if ((client_sock = accept(serverfd, (struct sockaddr *)&client_addr, (socklen_t *)&addr_len)) < 0)
+    {
+        perror("accept");
+        exit(1);
+    }
+
+    FILE *f = NULL;
+    clock_t time = clock();
+    while (1)
+    {
+        int rec= read(client_sock, buf, BUFFER_SIZE);
+        if (rec <= 0)
+        {
+            if (rec < 0)
+            {
+                perror("read");
+            }
+            break;
+        }
+
+        if (f == NULL)
+        {
+            f = fopen("newfile.bin" , "wb");
+            if (f == NULL)
+            {
+                perror("fopen");
+                exit(1);
+            }
+        }
+
+        fwrite(buf, 1, rec, f);
+    }
+
+    time = clock() - time;
+
+    fclose(f);
+    
+    close(client_sock);
+    close(serverfd);
+    printf("Uds Stream,%f seconds\n", (double)time);
+}
+
+void client_uds_stream(const char *ip, int port){
+    sleep(1);
+
+    int sock, len;
+    struct sockaddr_un client_addr;
+    char buf[BUFFER_SIZE];
+
+    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    client_addr.sun_family = AF_UNIX;
+    strcpy(client_addr.sun_path, SOCKET_PATH);
+    len = strlen(client_addr.sun_path) + sizeof(client_addr.sun_family);
+
+    if (connect(sock, (struct sockaddr *)&client_addr, len) == -1) {
+        perror("connect");
+        exit(1);
+    }
+
+    generate_file();
+    char c;
+    c = cecksum__("newfile.bin");
+    if (send(sock, &c, sizeof(c), 0) == -1) {
+        perror("send");
+        exit(1);
+    }
+
+    // open the file to be sent
+    FILE *f;
+    if ((f = fopen("newfile.bin", "rb")) == NULL) {
+        perror("fopen");
+        exit(1);
+    }
+
+    while (fgets(buf, BUFSIZ, f) != EOF) {
+        if (send(sock, buf, BUFFER_SIZE, 0) == -1) {
+            perror("send");
+            exit(1);
+        }
+    }
+
+    // close the file and socket
+    fclose(f);
+    close(sock);
+}
 void client_ipv4_tcp(int port, const char* ip)
 {
     fflush(stdout);
